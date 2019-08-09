@@ -35,11 +35,13 @@ struct ControlPacketHeader: PacketHeader
     std::uint32_t m_channel_id;
 };
 
+static_assert(CHUNK_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
+
 class Packet
 {
 public:
-    static std::size_t constexpr MAX_SIZE = 1400;
-    static std::size_t constexpr MAX_PAYLOAD_SIZE = MAX_SIZE - sizeof(BlockPacketHeader);
+    static std::size_t constexpr MAX_SIZE = MAX_PACKET_SIZE;
+    static std::size_t constexpr MAX_PAYLOAD_SIZE = CHUNK_SIZE;
 
     Packet(std::string_view data): m_data(data.begin(), data.end())
     {

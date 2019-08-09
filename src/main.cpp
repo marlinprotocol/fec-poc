@@ -23,6 +23,9 @@ int main(int argc, char** argv)
 
         boost::asio::io_context io_context;
 
+        auto server = udp::endpoint(asio::ip::make_address("127.0.0.1"), 10000);
+        int channel = 123;
+
         Node node(io_context, port);
         if(action == "proxy")
         {
@@ -30,9 +33,20 @@ int main(int argc, char** argv)
         }
         else if(action == "publish")
         {
-            node.send_random_block(123, 456, 1777, 'a', 4,
-                udp::endpoint(asio::ip::make_address("127.0.0.1"), 10000));
+            node.queue_random_block(channel, 456, 1777, 'a', 4, server);
+            node.send_queued();
         }
+        else if(action == "subscribe")
+        {
+            node.subscribe(channel, server);
+            node.listen();
+        }
+        else
+        {
+            std::cout << "Unrecognized command!" << std::endl;
+            return 1;
+        }
+        
 
         io_context.run();
     }

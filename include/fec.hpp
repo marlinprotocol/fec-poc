@@ -8,6 +8,8 @@
 
 #include <wirehair.h>
 
+#include "utility.hpp"
+
 #define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
 
 struct WirehairDeleter
@@ -30,7 +32,6 @@ using WirehairPtr = std::unique_ptr<
 //     - feed chunks to process_chunk() until nonempty result returned
 //       (which is the recovered block)
 // - Call get_chunk to obtain FEC chunks
-template <std::size_t CHUNK_SIZE>
 class Fec
 {
 public:

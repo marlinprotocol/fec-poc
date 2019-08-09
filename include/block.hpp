@@ -7,8 +7,8 @@
 #include <utility>
 
 #include "fec.hpp"
+#include "utility.hpp"
 
-template<std::uint32_t CHUNK_SIZE>
 class Block
 {
 public:
@@ -28,6 +28,11 @@ public:
 
     bool process_chunk(std::string_view payload, std::size_t ix)
     {
+        if(!m_decoded.empty())
+        {
+            return false;
+        }
+
         if(ix >= m_chunks_seen.size())
         {
             m_chunks_seen.resize(std::max(ix + 1, m_chunks_seen.size() * 2));
@@ -41,6 +46,16 @@ public:
             return true;
         }
         return false;
+    }
+
+    auto block_size() const
+    {
+        return m_block_size;
+    }
+
+    auto const& decoded_data() const
+    {
+        return m_decoded;
     }
 
     template <class Callback>
@@ -87,5 +102,5 @@ private:
     std::vector<char> m_decoded;
     std::vector<bool> m_chunks_seen;
 
-    Fec<CHUNK_SIZE> m_fec;
+    Fec m_fec;
 };
