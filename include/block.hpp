@@ -1,7 +1,6 @@
 #pragma once
 
 #include <deque>
-#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -13,19 +12,17 @@ template<std::uint32_t CHUNK_SIZE>
 class Block
 {
 public:
-    Block(
-        std::string_view data,
-        std::uint32_t block_size
-    ):
-        m_block_size(block_size),
+    Block(std::string_view data):
+        m_block_size(data.size()),
+        m_decoded(data.begin(), data.end()),
         m_fec(data)
     {
     }
 
     Block(std::uint32_t block_size):
         m_block_size(block_size),
-        m_fec(block_size),
-        m_chunks_seen(block_size / CHUNK_SIZE * 2) // some redundancy
+        m_chunks_seen(block_size / CHUNK_SIZE * 2), // some redundancy
+        m_fec(block_size)
     {
     }
 
@@ -87,7 +84,8 @@ public:
 private:
     std::uint32_t m_block_size;
 
-    Fec<CHUNK_SIZE> m_fec;
     std::vector<char> m_decoded;
     std::vector<bool> m_chunks_seen;
+
+    Fec<CHUNK_SIZE> m_fec;
 };

@@ -49,10 +49,30 @@ public:
     Node(asio::io_context& io_context, int port):
         m_socket(io_context, udp::endpoint(udp::v4(), port))
     {
-        main_loop();
     }
 
-    void main_loop()
+    Node(Node const &) = delete;
+
+    void send_bytes(std::vector<char>&& data, udp::endpoint endpoint)
+    {
+        // Some juggling to achieve correct data lifetime
+        auto buffer = asio::buffer(data);  // points to vector contents
+        m_socket.async_send_to(
+            buffer,
+            endpoint,
+            // vector gets move-captured into the lambda,
+            // but data is still at the same address
+            [capture = std::move(data)](const boost::system::error_code& ec,
+                std::size_t bytes_transferred)
+            {
+                std::cout << "Send: ec=" << ec.message()
+                    << " bytes=" << bytes_transferred
+                    << std::endl;
+            } // ~vector()
+        );       
+    }
+
+    void listen()
     {
         while(!m_queue.empty())
         {
@@ -61,19 +81,9 @@ public:
             std::cout << "Sending to " << op.m_receiver.address().to_string()
                 << ":" << op.m_receiver.port() << std::endl;
 
-            // Some juggling to achieve correct data lifetime
-            auto data = std::move(op.m_packet.data());
-            auto buffer = asio::buffer(data);
-            m_socket.async_send_to(
-                buffer,
-                op.m_receiver,
-                [capture = std::move(data)](const boost::system::error_code& ec,
-                    std::size_t bytes_transferred)
-                {
-                    std::cout << "Send: ec=" << ec.message()
-                        << " bytes=" << bytes_transferred
-                        << std::endl;
-                }
+            send_bytes(
+                op.m_packet.move_data(),
+                op.m_receiver
             );
         }
 
@@ -96,7 +106,9 @@ public:
                         if(ch.m_action == ControlPacketHeader::Action::SUBSCRIBE)
                         {
                             std::cout
-                                << "Subscribe to ch = " << ch.m_channel_id << std::endl;
+                                << m_peer.address() << ":" << m_peer.port()
+                                << " subscribed to ch = " << ch.m_channel_id
+                                << std::endl;
                             m_subscriptions[ch.m_channel_id].insert(m_peer);
                         }
                     }
@@ -105,7 +117,7 @@ public:
                 case PacketHeader::PacketType::BLOCK:
                     {
                         std::cout
-                            << "A block!"
+                            << "A packet!"
                             << " br=" << bytes_read
                             << " ch=" << p.header<BlockPacketHeader>().m_channel_id
                             << " bid=" << p.header<BlockPacketHeader>().m_block_id
@@ -145,25 +157,51 @@ public:
                     throw std::runtime_error("Bad packet type!");
                 }
 
-                main_loop();
+                listen();
             });
     }
 
-    void do_send(std::size_t length)
+    void send_random_block(std::uint32_t channel_id, std::uint32_t block_id,
+        std::uint32_t block_size, char junk, int packets, udp::endpoint receiver)
     {
-        m_socket.async_send_to(
-                asio::buffer(m_buffer, length), m_peer,
-                [this](boost::system::error_code /*ec*/, std::size_t /*bytes_sent*/)
-                {
-                    main_loop();
-                });
+        std::vector<char> message(block_size, junk);
+        Block<Packet::MAX_PAYLOAD_SIZE> block(v2sv(message));
+
+        block.generate_unseen_chunks(packets, [=](std::string_view payload, std::uint32_t i) {
+            BlockPacketHeader h = {
+                { 0, PacketHeader::PacketType::BLOCK },
+                channel_id,
+                block_id,
+                block_size,
+                i
+            };
+            Packet p(h, payload);
+            //std::cout << "Send " << payload.size() << " bytes of packet #" << i << "?" << std::endl;
+            send_bytes(p.move_data(), receiver);            
+        });
+
+        // for(std::uint32_t i = 0; i < block_count; ++i)
+        // {
+        //     BlockPacketHeader h = {
+        //         { 0, PacketHeader::PacketType::BLOCK },
+        //         channel_id,
+        //         block_id,
+        //         block_size,
+        //         i
+        //     };
+        //     std::uint32_t payload_size = std::min(Packet::MAX_PAYLOAD_SIZE,
+        //         block_size - i * Packet::MAX_PAYLOAD_SIZE);
+        //     std::vector<char> payload(payload_size, junk);
+        //     Packet p(h, v2sv(payload));
+        //     send_bytes(p.move_data(), receiver);
+        // }
     }
 
 private:
     udp::socket m_socket;
     udp::endpoint m_peer;
     std::vector<char> m_buffer;
-    std::unordered_map<std::uint32_t, 
+    std::unordered_map<std::uint32_t,
         std::set<udp::endpoint>> m_subscriptions;
     std::unordered_map<std::uint32_t,
         Block<Packet::MAX_PAYLOAD_SIZE>> m_blocks;

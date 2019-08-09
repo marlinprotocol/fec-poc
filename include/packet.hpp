@@ -38,8 +38,8 @@ struct ControlPacketHeader: PacketHeader
 class Packet
 {
 public:
-    static std::size_t const MAX_SIZE = 1400;
-    static std::size_t const MAX_PAYLOAD_SIZE = MAX_SIZE - sizeof(BlockPacketHeader);
+    static std::size_t constexpr MAX_SIZE = 1400;
+    static std::size_t constexpr MAX_PAYLOAD_SIZE = MAX_SIZE - sizeof(BlockPacketHeader);
 
     Packet(std::string_view data): m_data(data.begin(), data.end())
     {
@@ -68,6 +68,11 @@ public:
     Header const& header() const
     {
         return const_cast<Packet &>(*this).header<Header>();
+    }
+
+    std::vector<char>&& move_data()
+    {
+        return std::move(m_data);
     }
 
     std::string_view data(std::size_t offset = 0) const

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <string_view>
+#include <vector>
 #include <queue>
 
 template <
@@ -23,3 +25,8 @@ protected:
     using std::priority_queue<T, Container, Compare>::c;
     using std::priority_queue<T, Container, Compare>::comp;
 };
+
+std::string_view v2sv(std::vector<char> const& v)
+{
+    return { &v[0], v.size() };
+}

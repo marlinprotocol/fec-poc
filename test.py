@@ -6,12 +6,12 @@ import struct
 import sys
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server = ("127.0.0.1", 10001)
+server = ("127.0.0.1", 10000)
 
 def bs(b):
     return re.sub("(..)", r"\1 ", re.sub("(........)", r"\1  ", b.hex())).replace("    ", "  ")
 
-def speak(*values, ps=1000):
+def speak(*values, ps=100):
     data = b"".join(struct.pack("<L", v) for v in values) + b"." * ps
     print(bs(data))
     sock.sendto(data, server)
