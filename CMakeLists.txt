@@ -1,49 +1,51 @@
 cmake_minimum_required(VERSION 3.9)
 project(fec VERSION 0.0.1 LANGUAGES CXX)
 
-add_subdirectory(3rdparty/wirehair)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall -Wextra -pedantic-errors")
+add_compile_options(-msse4.1)
 
 find_package(Boost REQUIRED)
-include_directories(${Boost_INCLUDE_DIR})
-include_directories(3rdparty/wirehair)
+
+add_subdirectory(3rdparty/wirehair)
+    target_include_directories(wirehair-shared INTERFACE 3rdparty/wirehair)
+
+file(GLOB siamese_sources 3rdparty/siamese/*.cpp)
+
+add_library(siamese STATIC ${siamese_sources})
+    target_include_directories(siamese PUBLIC 3rdparty/siamese)
+
+    # Both Wirehair and Siamese leak the GF256Ctx symbol. Until the developer
+    # fixes it using __attribute__(visibility), we have to work around it.
+    target_compile_options(siamese PRIVATE -DGF256Ctx=GF256Ctx_Siamese_)
+
+add_library(siamese-shared SHARED ${siamese_sources})
+    target_include_directories(siamese-shared PUBLIC 3rdparty/siamese)
 
 add_executable(main src/main.cpp)
-target_link_libraries(main pthread wirehair-shared)
+    set_property(TARGET main PROPERTY CXX_STANDARD 17)
+    target_compile_options(main PRIVATE -Werror -Wall -Wextra -pedantic-errors)
+    target_include_directories(main
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${Boost_INCLUDE_DIR}
+    )
+    target_link_libraries(main wirehair-shared siamese pthread)
 
-#include(GNUInstallDirs)
-#
-#list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-#
-#add_library(fec STATIC
-#	src/main.cpp
-#)
-#
-target_include_directories(main
-	PUBLIC
-		${CMAKE_CURRENT_SOURCE_DIR}/include
-		${BOOST_INCLUDEDIR}
-#	PRIVATE
-#		${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-#
-#find_library(boost REQUIRED)
-#
-#find_library(wirehair REQUIRED)
-#target_link_libraries(fec PUBLIC wirehair)
-#
-#add_executable(main
-#	src/main.cpp
-#)
-#
-#target_include_directories(main
-#	PUBLIC
-#		${CMAKE_CURRENT_SOURCE_DIR}/include
-#	PRIVATE
-#		${CMAKE_CURRENT_SOURCE_DIR}/src
-#)
-#
-#target_link_libraries(main PUBLIC fec)
-#
+add_executable(exp src/exp.cpp)
+    set_property(TARGET exp PROPERTY CXX_STANDARD 17)
+    target_compile_options(exp PRIVATE -Werror -Wall -Wextra -pedantic-errors)
+    target_include_directories(exp
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${Boost_INCLUDE_DIR}
+    )
+    target_link_libraries(exp wirehair-shared siamese pthread)
+
+add_executable(tiny_exp src/tiny_exp.cpp)
+    set_property(TARGET tiny_exp PROPERTY CXX_STANDARD 17)
+    target_compile_options(tiny_exp PRIVATE -Werror -Wall -Wextra -pedantic-errors)
+    target_include_directories(tiny_exp
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${Boost_INCLUDE_DIR}
+    )
+    target_link_libraries(tiny_exp wirehair-shared siamese pthread)

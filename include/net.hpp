@@ -143,7 +143,7 @@ public:
                             h.m_block_size
                         ).first->second; // pair<iterator, bool>
 
-                        bool decoded = block.process_chunk(
+                        bool decoded = block.process_symbol(
                             p.payload<BlockPacketHeader>(),
                             h.m_packet_index
                         );
@@ -151,7 +151,7 @@ public:
                         if(decoded)
                         {
                             std::cout << "Full block ready, crc = "
-                                << crc32(v2sv(block.decoded_data()))
+                                << crc32(to_sv(block.decoded_data()))
                                 << std::endl;
                         }
 
@@ -199,7 +199,7 @@ public:
         std::uint32_t channel_id, std::uint32_t block_id,
         int n_packets, udp::endpoint receiver)
     {
-        block.generate_unseen_chunks(
+        block.generate_unseen_symbols(
             n_packets,
             [&](std::string_view payload, std::uint32_t i) {
                 queue_block_packet(
@@ -218,9 +218,9 @@ public:
         std::uint32_t block_size, char junk, int n_packets, udp::endpoint receiver)
     {
         std::vector<char> message(block_size, junk);
-        std::cout << "Generated a message, crc = " << crc32(v2sv(message)) << std::endl;
+        std::cout << "Generated a message, crc = " << crc32(to_sv(message)) << std::endl;
         
-        Block block(v2sv(message));
+        Block block(to_sv(message));
         queue_block(block, channel_id, block_id, n_packets, receiver);
     }
 

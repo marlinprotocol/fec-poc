@@ -21,25 +21,25 @@ public:
 
     Block(std::uint32_t block_size):
         m_block_size(block_size),
-        m_chunks_seen(block_size / CHUNK_SIZE * 2), // some redundancy
+        m_symbols_seen(block_size / CHUNK_SIZE * 2), // some redundancy
         m_fec(block_size)
     {
     }
 
-    bool process_chunk(std::string_view payload, std::size_t ix)
+    bool process_symbol(std::string_view payload, std::size_t ix)
     {
         if(!m_decoded.empty())
         {
             return false;
         }
 
-        if(ix >= m_chunks_seen.size())
+        if(ix >= m_symbols_seen.size())
         {
-            m_chunks_seen.resize(std::max(ix + 1, m_chunks_seen.size() * 2));
+            m_symbols_seen.resize(std::max(ix + 1, m_symbols_seen.size() * 2));
         }
-        m_chunks_seen[ix] = true;
+        m_symbols_seen[ix] = true;
 
-        auto res = m_fec.process_chunk(payload, ix);
+        auto res = m_fec.process_symbol(payload, ix);
         if(!res.empty())
         {
             m_decoded = std::move(res);
@@ -59,12 +59,12 @@ public:
     }
 
     template <class Callback>
-    void generate_unseen_chunks(int n, Callback&& callback)
+    void generate_unseen_symbols(int n, Callback&& callback)
     {
         std::uint32_t first_fec = (m_block_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
         for(std::uint32_t i = 0; i < first_fec; ++i)
         {
-            if(i < m_chunks_seen.size() && m_chunks_seen[i])
+            if(i < m_symbols_seen.size() && m_symbols_seen[i])
             {
                 continue;
             }
@@ -81,7 +81,7 @@ public:
         }
         for(std::uint32_t i = first_fec; ; i++)
         {
-            if(i < m_chunks_seen.size() && m_chunks_seen[i])
+            if(i < m_symbols_seen.size() && m_symbols_seen[i])
             {
                 continue;
             }
@@ -91,8 +91,8 @@ public:
                 return;
             }
 
-            std::vector chunk = m_fec.get_chunk(i);
-            callback(std::string_view(&chunk[0], chunk.size()), i);
+            std::vector data = m_fec.get_symbol_data(i);
+            callback(std::string_view(&data[0], data.size()), i);
         }
     }
 
@@ -100,7 +100,7 @@ private:
     std::uint32_t m_block_size;
 
     std::vector<char> m_decoded;
-    std::vector<bool> m_chunks_seen;
+    std::vector<bool> m_symbols_seen;
 
-    Fec m_fec;
+    BlockFec m_fec;
 };

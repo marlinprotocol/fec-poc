@@ -1,9 +1,12 @@
 #!/bin/sh
 
+# Prerequisites:
+# - vcpkg.cmake with one line:
+#     include(/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake NO_POLICY_SCOPE)
+# - Boost installed via vcpkg
+
+cd "$(dirname "$0")"
+
 mkdir -p build
-cd build
-cmake \
-    -DCMAKE_TOOLCHAIN_FILE=/home/roma/data/opt/vcpkg/scripts/buildsystems/vcpkg.cmake \
-    -DCMAKE_INSTALL_PREFIX=INST \
-    ..
-make
+cmake -B build -DCMAKE_INSTALL_PREFIX=INST -DCMAKE_TOOLCHAIN_FILE=vcpkg.cmake
+make -C build
