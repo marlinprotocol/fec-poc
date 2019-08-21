@@ -13,6 +13,7 @@ struct PacketHeader
     enum class PacketType: std::uint32_t
     {
         BLOCK,
+        STREAM,
         CONTROL,
     } m_packet_type;
 };
@@ -22,6 +23,12 @@ struct BlockPacketHeader: PacketHeader
     std::uint32_t m_channel_id;
     std::uint32_t m_block_id;
     std::uint32_t m_block_size;
+    std::uint32_t m_packet_index;
+};
+
+struct StreamPacketHeader: PacketHeader
+{
+    std::uint32_t m_channel_id;
     std::uint32_t m_packet_index;
 };
 
@@ -35,13 +42,14 @@ struct ControlPacketHeader: PacketHeader
     std::uint32_t m_channel_id;
 };
 
-static_assert(CHUNK_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
+static_assert(MAX_BLOCK_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
+static_assert(MAX_STREAM_SIZE + sizeof(StreamPacketHeader) == MAX_PACKET_SIZE);
 
 class Packet
 {
 public:
     static std::size_t constexpr MAX_SIZE = MAX_PACKET_SIZE;
-    static std::size_t constexpr MAX_PAYLOAD_SIZE = CHUNK_SIZE;
+    static std::size_t constexpr MAX_PAYLOAD_SIZE = MAX_BLOCK_SIZE;
 
     Packet(std::string_view data): m_data(data.begin(), data.end())
     {

@@ -40,12 +40,12 @@ add_executable(exp src/exp.cpp)
     )
     target_link_libraries(exp wirehair-shared siamese pthread)
 
-add_executable(tiny_exp src/tiny_exp.cpp)
-    set_property(TARGET tiny_exp PROPERTY CXX_STANDARD 17)
-    target_compile_options(tiny_exp PRIVATE -Werror -Wall -Wextra -pedantic-errors)
-    target_include_directories(tiny_exp
+add_executable(ctr_exp src/ctr_exp.cpp)
+    set_property(TARGET ctr_exp PROPERTY CXX_STANDARD 17)
+    target_compile_options(ctr_exp PRIVATE -Werror -Wall -Wextra -pedantic-errors)
+    target_include_directories(ctr_exp
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${Boost_INCLUDE_DIR}
     )
-    target_link_libraries(tiny_exp wirehair-shared siamese pthread)
+    target_link_libraries(ctr_exp wirehair-shared siamese pthread)

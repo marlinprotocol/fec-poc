@@ -18,7 +18,7 @@ std::ifstream urandom("/dev/urandom");
 
 Chunk random_chunk()
 {
-    Chunk message(CHUNK_SIZE);
+    Chunk message(MAX_BLOCK_SIZE);
     urandom.read(&message[0], message.size());
     return message;
 }
@@ -44,7 +44,7 @@ struct show_crc32
 class ChunkSource
 {
 public:
-    std::pair<Chunk, StreamEncoderFec::packet_index_t> get_symbol()
+    std::pair<Chunk, StreamFecEncoder::packet_index_t> get_symbol()
     {
         // About to send regular packet #m_packets_sent
         if(m_packets_sent && m_packets_sent % FEC_PACKET_EVERY == 0 && !m_fec_sent)
@@ -82,13 +82,13 @@ public:
 private:
     int m_packets_sent = 0;
     bool m_fec_sent = false;
-    StreamEncoderFec m_encoder;
+    StreamFecEncoder m_encoder;
 };
 
 class ChunkSink
 {
 public:
-    using packet_index_t = StreamDecoderFec::packet_index_t;
+    using packet_index_t = StreamFecDecoder::packet_index_t;
 
     std::vector<char> process_chunk(std::string_view message, packet_index_t index)
     {
@@ -121,7 +121,7 @@ public:
     }
 
 private:
-    StreamDecoderFec m_decoder;
+    StreamFecDecoder m_decoder;
     int n_chunks_received = 0;
 };
 
@@ -135,11 +135,11 @@ int main()
         std::cout << siamese_init() << std::endl;
         std::cout << wirehair_init() << std::endl;
 
-        //StreamEncoderFec encoder;
+        //StreamFecEncoder encoder;
         SiameseEncoder enc = siamese_encoder_create();
         SiameseDecoder dec = siamese_decoder_create();
-        StreamDecoderFec decoder;
-        using packet_index_t = StreamEncoderFec::packet_index_t;
+        StreamFecDecoder decoder;
+        using packet_index_t = StreamFecEncoder::packet_index_t;
 
         UChunk const same_chunk(1000u, '?');
 

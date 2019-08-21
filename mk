@@ -9,4 +9,4 @@ cd "$(dirname "$0")"
 
 mkdir -p build
 cmake -B build -DCMAKE_INSTALL_PREFIX=INST -DCMAKE_TOOLCHAIN_FILE=vcpkg.cmake
-make -C build
+(cd build && make)

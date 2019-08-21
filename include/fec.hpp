@@ -25,7 +25,7 @@ using PtrWithDeleteFunction = std::unique_ptr<
 // - either a BLOCK (a certain number of bytes)
 // - or a STREAM (an indefinite sequence of bytes)
 // Split the above into CHUNKS (smaller byte sequences) sequentially numbered.
-// In case of a BLOCK, there will be N CHUNKS.
+// In case of a BLOCK, there will be N CHUNKS of equal size (except last chunk).
 // The goal is for the other party to receive all the CHUNKS and reassemble
 // the BLOCK or the STREAM in correct order.
 // FEC generates us SYMBOLS, each of which contains DATA and an INDEX.
@@ -36,15 +36,18 @@ using PtrWithDeleteFunction = std::unique_ptr<
 // The SYMBOLS will likely be sent to the receiver in PACKETS, but this module
 // doesn’t care about transport.
 
-// === Workflow ===
+// === BlockFec workflow ===
 //
-// - Either:
-//   - construct with the entire block
-//   - or:
-//     - construct with size option only
-//     - feed chunks to process_symbol() until nonempty result returned
-//       (which is the recovered block)
-// - Call get_symbol to obtain FEC chunks
+// The same class works as both encoder and decoder.
+// On the sending side:
+// - Construct with the entire block.
+// - Call get_symbol_data to obtain FEC symbols.
+//
+// On the receiving side:
+// - Construct with size option only.
+// - Feed symbols to process_symbol() until nonempty result returned
+//   (which is the recovered block).
+// - Call get_symbol_data to obtain original data and FEC symbols.
 class BlockFec
 {
 public:
@@ -56,7 +59,7 @@ public:
                 m_wirehair.get(),
                 as_pchar,
                 block.size(),
-                CHUNK_SIZE
+                MAX_BLOCK_SIZE
             )
         );
         ENFORCE(m_wirehair.get());
@@ -69,7 +72,7 @@ public:
             wirehair_decoder_create(
                 m_wirehair.get(),
                 block_size,
-                CHUNK_SIZE
+                MAX_BLOCK_SIZE
             )
         );
         ENFORCE(m_wirehair.get());
@@ -77,7 +80,7 @@ public:
 
     Chunk get_symbol_data(unsigned symbol_index)
     {
-        Chunk res(CHUNK_SIZE);
+        Chunk res(MAX_BLOCK_SIZE);
         std::uint32_t bytes_written;
         ENFORCE(wirehair_encode(
             m_wirehair.get(),
@@ -131,10 +134,10 @@ public:
     static packet_index_t constexpr PACKET_INDEX_FEC = packet_index_t(-1);
 };
 
-class StreamEncoderFec: public StreamFecCommon
+class StreamFecEncoder: public StreamFecCommon
 {
 public:
-    StreamEncoderFec(): m_encoder(siamese_encoder_create())
+    StreamFecEncoder(): m_encoder(siamese_encoder_create())
     {
     }
 
@@ -201,10 +204,10 @@ private:
     PtrWithDeleteFunction<SiameseEncoder, siamese_encoder_free> m_encoder;
 };
 
-class StreamDecoderFec: public StreamFecCommon
+class StreamFecDecoder: public StreamFecCommon
 {
 public:
-    StreamDecoderFec(): m_decoder(siamese_decoder_create())
+    StreamFecDecoder(): m_decoder(siamese_decoder_create())
     {
     }
 
@@ -216,7 +219,7 @@ public:
                 (unsigned)data.size(),
                 char_cast<unsigned char const *>(data.data())
             };
-            std::cout << "Decoder::ps[r] " << packet << std::endl;
+            //std::cout << "Decoder::ps[r] " << packet << std::endl;
             ENFORCE(siamese_decoder_add_recovery(
                 m_decoder.get(),
                 &packet
@@ -229,7 +232,7 @@ public:
                 (unsigned)data.size(),
                 char_cast<unsigned char const *>(data.data())
             };
-            std::cout << "Decoder::ps[o] " << packet << std::endl;
+            //std::cout << "Decoder::ps[o] " << packet << std::endl;
             auto res = siamese_decoder_add_original(
                 m_decoder.get(),
                 &packet
@@ -262,7 +265,7 @@ public:
         std::vector<std::pair<Chunk, packet_index_t>> result;
         for(auto packet = packets; n_packets--; ++packet)
         {
-            std::cout << *packet << std::endl;
+            //std::cout << *packet << std::endl;
             auto sv = to_sv(*packet);
             result.push_back({
                 { begin(sv), end(sv) },
@@ -289,7 +292,7 @@ public:
 
     std::vector<char> generate_ack()
     {
-        std::vector<char> message(CHUNK_SIZE); // TODO: better max
+        std::vector<char> message(MAX_BLOCK_SIZE); // TODO: better max
         unsigned bytes_written;
         ENFORCE(siamese_decoder_ack(
             m_decoder.get(),

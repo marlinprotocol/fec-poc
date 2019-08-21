@@ -2,18 +2,21 @@
 
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <string_view>
 #include <vector>
 #include <queue>
 
 #include <boost/crc.hpp>
 #include <boost/io/ios_state.hpp>
+#include <boost/rational.hpp>
 
 #include <iostream>
 #include <iomanip>
 
 std::uint32_t const MAX_PACKET_SIZE = 1400;
-std::uint32_t const CHUNK_SIZE = MAX_PACKET_SIZE - 6 * sizeof(std::uint32_t);
+std::uint32_t const MAX_BLOCK_SIZE = MAX_PACKET_SIZE - 6 * sizeof(std::uint32_t);
+std::uint32_t const MAX_STREAM_SIZE = MAX_PACKET_SIZE - 4 * sizeof(std::uint32_t);
 
 using Chunk = std::vector<char>;
 
@@ -27,10 +30,19 @@ class movable_priority_queue: public std::priority_queue<T, Container, Compare>
 public:
     T pop_value()
     {
+        if(c.empty())
+        {
+            throw std::runtime_error("pop_value: empty queue!");
+        }
         std::pop_heap(c.begin(), c.end(), comp);
         T value = std::move(c.back());
         c.pop_back();
         return value;
+    }
+
+    friend T pop_value(movable_priority_queue& q)
+    {
+        return q.pop_value();
     }
 
 protected:
@@ -38,6 +50,17 @@ protected:
     using std::priority_queue<T, Container, Compare>::comp;
 };
 
+template <class X, class Cont>
+auto pop_value(std::queue<X, Cont>& q)
+{
+    if(q.empty())
+    {
+        throw std::runtime_error("pop_value: empty queue!");
+    }
+    auto value = q.front();
+    q.pop();
+    return value;
+}
 
 inline unsigned crc32(std::string_view data)
 {
@@ -45,6 +68,18 @@ inline unsigned crc32(std::string_view data)
     result.process_bytes(&data[0], data.size());
     return result.checksum();
 }
+
+struct show_crc32
+{
+    std::string_view sv;
+
+    friend std::ostream& operator <<(std::ostream& os, show_crc32 const& x)
+    {
+        boost::io::ios_flags_saver ifs(std::cout);
+        return os
+            << std::hex << std::setfill('0') << std::setw(8) << crc32(x.sv);
+    };
+};
 
 template <class Ptr>
 inline void assert_is_char_cast_suitable()
@@ -113,4 +148,36 @@ inline std::ostream& operator <<(std::ostream& os, SiameseRecoveryPacket const& 
             << crc32({ (char *)packet.Data, packet.DataBytes })
         << "]";
     return os;
+}
+
+class RandomDeviceSeedSeq
+{
+public:
+    using result_type = std::random_device::result_type;
+
+    explicit RandomDeviceSeedSeq(std::random_device& dev): m_dev(&dev)
+    {
+    }
+
+    template <class RandomAccessIterator>
+    void generate(RandomAccessIterator first, RandomAccessIterator last) {
+        std::generate(first, last, std::ref(*m_dev));
+    }
+
+private:
+    std::random_device *m_dev;
+};
+
+template <class Engine>
+Engine make_random_engine()
+{
+    static std::random_device rd;
+    RandomDeviceSeedSeq ss{rd};
+    return Engine(ss);
+}
+
+template <class Int>
+Int ceil(boost::rational<Int> r)
+{
+    return (r.numerator() + r.denominator() - 1) / r.denominator();
 }

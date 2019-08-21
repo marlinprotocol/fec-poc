@@ -21,7 +21,7 @@ public:
 
     Block(std::uint32_t block_size):
         m_block_size(block_size),
-        m_symbols_seen(block_size / CHUNK_SIZE * 2), // some redundancy
+        m_symbols_seen(block_size / MAX_BLOCK_SIZE * 2), // some redundancy
         m_fec(block_size)
     {
     }
@@ -61,7 +61,7 @@ public:
     template <class Callback>
     void generate_unseen_symbols(int n, Callback&& callback)
     {
-        std::uint32_t first_fec = (m_block_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+        std::uint32_t first_fec = (m_block_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE;
         for(std::uint32_t i = 0; i < first_fec; ++i)
         {
             if(i < m_symbols_seen.size() && m_symbols_seen[i])
@@ -75,8 +75,8 @@ public:
             }
 
             callback(std::string_view(
-                &m_decoded[i * CHUNK_SIZE],
-                std::min((i + 1) * CHUNK_SIZE, m_block_size) - i * CHUNK_SIZE
+                &m_decoded[i * MAX_BLOCK_SIZE],
+                std::min((i + 1) * MAX_BLOCK_SIZE, m_block_size) - i * MAX_BLOCK_SIZE
             ), i);
         }
         for(std::uint32_t i = first_fec; ; i++)
