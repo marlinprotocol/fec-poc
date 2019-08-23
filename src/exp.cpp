@@ -19,8 +19,8 @@
 #define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
 
 int const N_PACKETS = 50;
-int const MAX_BLOCK_SIZE_MIN = 10;
-int const MAX_BLOCK_SIZE_MAX = MAX_BLOCK_SIZE;
+int const MAX_BLOCK_PACKET_SIZE_MIN = 10;
+int const MAX_BLOCK_PACKET_SIZE_MAX = MAX_BLOCK_PACKET_SIZE;
 int const ACK_EVERY = 3;
 auto const FEC_RATIO = boost::rational<int>(2, 5); // recovery/original
 int const LOSE_EVERY = 6;
@@ -51,7 +51,7 @@ private:
         static auto engine = make_random_engine<std::mt19937>();
 
         std::independent_bits_engine<decltype(engine), CHAR_BIT, unsigned char> bytes;
-        std::uniform_int_distribution<> sizes(MAX_BLOCK_SIZE_MIN, MAX_BLOCK_SIZE_MAX);
+        std::uniform_int_distribution<> sizes(MAX_BLOCK_PACKET_SIZE_MIN, MAX_BLOCK_PACKET_SIZE_MAX);
 
         Chunk symbol(sizes(engine));
         std::generate(symbol.begin(), symbol.end(), bytes);

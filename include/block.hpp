@@ -21,7 +21,7 @@ public:
 
     Block(std::uint32_t block_size):
         m_block_size(block_size),
-        m_symbols_seen(block_size / MAX_BLOCK_SIZE * 2), // some redundancy
+        m_symbols_seen(block_size / MAX_BLOCK_PACKET_SIZE * 2), // some redundancy
         m_fec(block_size)
     {
     }
@@ -61,8 +61,8 @@ public:
     template <class Callback>
     void generate_unseen_symbols(float redundancy, Callback&& callback)
     {
-        std::uint32_t n_original = (m_block_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE;
-        std::uint32_t n = n_original * redundancy + 0.5;
+        std::uint32_t n_original = (m_block_size + MAX_BLOCK_PACKET_SIZE - 1) / MAX_BLOCK_PACKET_SIZE;
+        std::uint32_t n = n_original * redundancy + 0.5;  // assuming >= n_original
         for(std::uint32_t i = 0; i < n_original; ++i)
         {
             if(i < m_symbols_seen.size() && m_symbols_seen[i])
@@ -70,26 +70,16 @@ public:
                 continue;
             }
 
-            if(!n--)
-            {
-                return;
-            }
-
             callback(std::string_view(
-                &m_decoded[i * MAX_BLOCK_SIZE],
-                std::min((i + 1) * MAX_BLOCK_SIZE, m_block_size) - i * MAX_BLOCK_SIZE
+                &m_decoded[i * MAX_BLOCK_PACKET_SIZE],
+                std::min((i + 1) * MAX_BLOCK_PACKET_SIZE, m_block_size) - i * MAX_BLOCK_PACKET_SIZE
             ), i);
         }
-        for(std::uint32_t i = n_original; ; i++)
+        for(std::uint32_t i = n_original; i < n; i++)
         {
             if(i < m_symbols_seen.size() && m_symbols_seen[i])
             {
                 continue;
-            }
-
-            if(!n--)
-            {
-                return;
             }
 
             std::vector data = m_fec.get_symbol_data(i);

@@ -59,7 +59,7 @@ public:
                 m_wirehair.get(),
                 as_pchar,
                 block.size(),
-                MAX_BLOCK_SIZE
+                MAX_BLOCK_PACKET_SIZE
             )
         );
         ENFORCE(m_wirehair.get());
@@ -72,7 +72,7 @@ public:
             wirehair_decoder_create(
                 m_wirehair.get(),
                 block_size,
-                MAX_BLOCK_SIZE
+                MAX_BLOCK_PACKET_SIZE
             )
         );
         ENFORCE(m_wirehair.get());
@@ -80,7 +80,7 @@ public:
 
     Chunk get_symbol_data(unsigned symbol_index)
     {
-        Chunk res(MAX_BLOCK_SIZE);
+        Chunk res(MAX_BLOCK_PACKET_SIZE);
         std::uint32_t bytes_written;
         ENFORCE(wirehair_encode(
             m_wirehair.get(),
@@ -292,7 +292,7 @@ public:
 
     std::vector<char> generate_ack()
     {
-        std::vector<char> message(MAX_BLOCK_SIZE); // TODO: better max
+        std::vector<char> message(MAX_BLOCK_PACKET_SIZE); // TODO: better max
         unsigned bytes_written;
         ENFORCE(siamese_decoder_ack(
             m_decoder.get(),
@@ -311,5 +311,5 @@ private:
 inline void fec_init()
 {
     wirehair_init();
-    siamese_init();
+    //siamese_init();
 }

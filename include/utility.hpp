@@ -15,8 +15,10 @@
 #include <iomanip>
 
 std::uint32_t const MAX_PACKET_SIZE = 1400;
-std::uint32_t const MAX_BLOCK_SIZE = MAX_PACKET_SIZE - 6 * sizeof(std::uint32_t);
-std::uint32_t const MAX_STREAM_SIZE = MAX_PACKET_SIZE - 4 * sizeof(std::uint32_t);
+std::uint32_t const MAX_BLOCK_PACKET_SIZE = MAX_PACKET_SIZE - 6 * sizeof(std::uint32_t);
+std::uint32_t const MAX_STREAM_PACKET_SIZE = MAX_PACKET_SIZE - 4 * sizeof(std::uint32_t);
+
+float const REDUNDANCY = 1.3;
 
 using Chunk = std::vector<char>;
 

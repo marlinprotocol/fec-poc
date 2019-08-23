@@ -46,14 +46,14 @@ struct ControlPacketHeader: PacketHeader
     std::uint32_t m_kbps;
 };
 
-static_assert(MAX_BLOCK_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
-static_assert(MAX_STREAM_SIZE + sizeof(StreamPacketHeader) == MAX_PACKET_SIZE);
+static_assert(MAX_BLOCK_PACKET_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
+static_assert(MAX_STREAM_PACKET_SIZE + sizeof(StreamPacketHeader) == MAX_PACKET_SIZE);
 
 class Packet
 {
 public:
     static std::size_t constexpr MAX_SIZE = MAX_PACKET_SIZE;
-    static std::size_t constexpr MAX_PAYLOAD_SIZE = MAX_BLOCK_SIZE;
+    static std::size_t constexpr MAX_PAYLOAD_SIZE = MAX_BLOCK_PACKET_SIZE;
 
     Packet(std::string_view data): m_data(data.begin(), data.end())
     {
@@ -102,9 +102,23 @@ public:
 
     friend bool operator <(Packet const& x, Packet const& y)
     {
-        return
-            x.header<PacketHeader>().m_packet_type <
-            y.header<PacketHeader>().m_packet_type;
+        int const d =
+            (int)x.header<PacketHeader>().m_packet_type -
+            (int)y.header<PacketHeader>().m_packet_type
+        ;
+        if(d < 0)
+            return true;
+        if(d > 0)
+            return false;
+
+        if(x.header<PacketHeader>().m_packet_type == PacketHeader::PacketType::BLOCK)
+        {
+            return
+                y.header<BlockPacketHeader>().m_packet_index <
+                x.header<BlockPacketHeader>().m_packet_index
+            ;
+        }
+        return false;
     }
 
 private:

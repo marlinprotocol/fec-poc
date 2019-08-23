@@ -18,7 +18,7 @@ std::ifstream urandom("/dev/urandom");
 
 Chunk random_chunk()
 {
-    Chunk message(MAX_BLOCK_SIZE);
+    Chunk message(MAX_BLOCK_PACKET_SIZE);
     urandom.read(&message[0], message.size());
     return message;
 }

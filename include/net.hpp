@@ -164,7 +164,6 @@ public:
                 enforce_ec(ec);
                 m_buffer.resize(bytes_read);
 
-                std::cout << "Got " << bytes_read << " bytes" << std::endl;
                 Packet p(std::move(m_buffer));
                 auto const& h = p.header<PacketHeader>();
                 switch(h.m_packet_type)
@@ -225,12 +224,14 @@ public:
                         for(auto& cr : m_subscriptions[h.m_channel_id])
                         {
                             auto& receiver = const_cast<Receiver &>(cr);
+                            //^ TODO: use a map
+
                             std::cout << "Queue to " << receiver << std::endl;
                             receiver.queue_packet(m_socket, p);
                             if(decoded)
                             {
                                 queue_block(block, h.m_channel_id, h.m_block_id,
-                                    2, receiver);
+                                    REDUNDANCY, receiver);
                             }
                         }
                     }

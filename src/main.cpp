@@ -55,7 +55,8 @@ int main(int argc, char** argv)
                 options.at("connect").as<int>());
             
             Receiver r(io_context, server, 2000);
-            node.queue_random_block(channel, 456, options.at("size").as<int>(), 'a', 1.2, r);
+            node.queue_random_block(channel, 456, options.at("size").as<int>(),
+                'a', REDUNDANCY, r);
             io_context.run();
         }
         else if(action == "subscribe")
