@@ -311,5 +311,5 @@ private:
 inline void fec_init()
 {
     wirehair_init();
-    //siamese_init();
+    siamese_init();
 }

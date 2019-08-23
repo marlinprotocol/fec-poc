@@ -19,6 +19,7 @@ add_library(siamese STATIC ${siamese_sources})
 
 add_library(siamese-shared SHARED ${siamese_sources})
     target_include_directories(siamese-shared PUBLIC 3rdparty/siamese)
+    target_compile_options(siamese PRIVATE -DGF256Ctx=GF256Ctx_Siamese_)
 
 add_executable(main src/main.cpp)
     set_property(TARGET main PROPERTY CXX_STANDARD 17)
@@ -28,7 +29,7 @@ add_executable(main src/main.cpp)
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${Boost_INCLUDE_DIR}
     )
-    target_link_libraries(main wirehair-shared siamese ${Boost_LIBRARIES} pthread)
+    target_link_libraries(main wirehair-shared siamese-shared ${Boost_LIBRARIES} pthread)
 
 add_executable(exp src/exp.cpp)
     set_property(TARGET exp PROPERTY CXX_STANDARD 17)
