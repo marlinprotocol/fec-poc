@@ -3,7 +3,7 @@ project(fec VERSION 0.0.1 LANGUAGES CXX)
 
 add_compile_options(-msse4.1)
 
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 add_subdirectory(3rdparty/wirehair)
     target_include_directories(wirehair-shared INTERFACE 3rdparty/wirehair)
@@ -28,7 +28,7 @@ add_executable(main src/main.cpp)
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${Boost_INCLUDE_DIR}
     )
-    target_link_libraries(main wirehair-shared siamese pthread)
+    target_link_libraries(main wirehair-shared siamese ${Boost_LIBRARIES} pthread)
 
 add_executable(exp src/exp.cpp)
     set_property(TARGET exp PROPERTY CXX_STANDARD 17)

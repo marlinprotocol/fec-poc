@@ -59,10 +59,11 @@ public:
     }
 
     template <class Callback>
-    void generate_unseen_symbols(int n, Callback&& callback)
+    void generate_unseen_symbols(float redundancy, Callback&& callback)
     {
-        std::uint32_t first_fec = (m_block_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE;
-        for(std::uint32_t i = 0; i < first_fec; ++i)
+        std::uint32_t n_original = (m_block_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE;
+        std::uint32_t n = n_original * redundancy + 0.5;
+        for(std::uint32_t i = 0; i < n_original; ++i)
         {
             if(i < m_symbols_seen.size() && m_symbols_seen[i])
             {
@@ -79,7 +80,7 @@ public:
                 std::min((i + 1) * MAX_BLOCK_SIZE, m_block_size) - i * MAX_BLOCK_SIZE
             ), i);
         }
-        for(std::uint32_t i = first_fec; ; i++)
+        for(std::uint32_t i = n_original; ; i++)
         {
             if(i < m_symbols_seen.size() && m_symbols_seen[i])
             {

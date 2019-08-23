@@ -6,14 +6,17 @@
 #include <utility>
 #include <string_view>
 
+unsigned const IP_UDP_OVERHEAD = 20 + 8;
+
 // Who cares about endianness. For experimental use only!
 struct PacketHeader
 {
     std::uint32_t version;
     enum class PacketType: std::uint32_t
     {
-        BLOCK,
+        // Ordered by priority, starting with lowest
         STREAM,
+        BLOCK,
         CONTROL,
     } m_packet_type;
 };
@@ -40,6 +43,7 @@ struct ControlPacketHeader: PacketHeader
         SUBSCRIBE,
     } m_action;
     std::uint32_t m_channel_id;
+    std::uint32_t m_kbps;
 };
 
 static_assert(MAX_BLOCK_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
@@ -94,6 +98,13 @@ public:
     std::string_view payload() const
     {
         return data(sizeof(Header));
+    }
+
+    friend bool operator <(Packet const& x, Packet const& y)
+    {
+        return
+            x.header<PacketHeader>().m_packet_type <
+            y.header<PacketHeader>().m_packet_type;
     }
 
 private:
