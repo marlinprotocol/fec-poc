@@ -50,3 +50,13 @@ add_executable(ctr_exp src/ctr_exp.cpp)
             ${Boost_INCLUDE_DIR}
     )
     target_link_libraries(ctr_exp wirehair-shared siamese pthread)
+
+add_executable(source_sink_exp src/source_sink_exp.cpp)
+    set_property(TARGET source_sink_exp PROPERTY CXX_STANDARD 17)
+    target_compile_options(source_sink_exp PRIVATE -Werror -Wall -Wextra -pedantic-errors)
+    target_include_directories(source_sink_exp
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${Boost_INCLUDE_DIR}
+    )
+    target_link_libraries(source_sink_exp wirehair-shared siamese pthread)

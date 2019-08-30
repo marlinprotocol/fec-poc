@@ -54,16 +54,28 @@ int main(int argc, char** argv)
             auto server = udp::endpoint(asio::ip::make_address("127.0.0.1"),
                 options.at("connect").as<int>());
             
-            Receiver r(io_context, server, 2000);
-            node.queue_random_block(channel, 456, options.at("size").as<int>(),
-                'a', REDUNDANCY, r);
+            AsioReceiver receiver = node.make_receiver(server, 2000);
+            
+            std::vector<char> message(options.at("size").as<int>(), 'j');
+            std::cout << "New message, crc=" << show_crc32{to_sv(message)} << std::endl;
+            
+            Block block(to_sv(message));
+            for(auto packet : block_packet_range(block, channel, 456, REDUNDANCY))
+            {
+                receiver.queue_packet(packet.move_data());
+            }
+
             io_context.run();
         }
         else if(action == "subscribe")
         {
             auto server = udp::endpoint(asio::ip::make_address("127.0.0.1"),
                 options.at("connect").as<int>());
-            node.subscribe(channel, server, options.at("kbps").as<int>());
+            
+            AsioReceiver r = node.make_receiver(server, 100'000);
+            auto p = make_subscribe_packet(channel, options.at("kbps").as<int>());
+            r.queue_packet(p.move_data());
+
             node.listen();
             io_context.run();
         }

@@ -78,9 +78,9 @@ public:
         ENFORCE(m_wirehair.get());
     }
 
-    Chunk get_symbol_data(unsigned symbol_index)
+    Bytes get_symbol_data(unsigned symbol_index)
     {
-        Chunk res(MAX_BLOCK_PACKET_SIZE);
+        Bytes res(MAX_BLOCK_PACKET_SIZE);
         std::uint32_t bytes_written;
         ENFORCE(wirehair_encode(
             m_wirehair.get(),
@@ -241,7 +241,7 @@ public:
         }
     }
 
-    Chunk get_chunk(packet_index_t index)
+    Bytes get_chunk(packet_index_t index)
     {
         SiameseOriginalPacket packet = { index, 0u, nullptr };
         ENFORCE(siamese_decoder_get(
@@ -252,7 +252,7 @@ public:
         return { begin(sv), end(sv) };
     }
 
-    std::vector<std::pair<Chunk, packet_index_t>> get_new_chunks()
+    std::vector<std::pair<Bytes, packet_index_t>> get_new_chunks()
     {
         SiameseOriginalPacket* packets = nullptr;
         unsigned n_packets;
@@ -262,7 +262,7 @@ public:
             &n_packets
         ) == 0);
         
-        std::vector<std::pair<Chunk, packet_index_t>> result;
+        std::vector<std::pair<Bytes, packet_index_t>> result;
         for(auto packet = packets; n_packets--; ++packet)
         {
             //std::cout << *packet << std::endl;

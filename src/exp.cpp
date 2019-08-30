@@ -31,29 +31,29 @@ using packet_index_t = StreamFecDecoder::packet_index_t;
 class ChunkSource
 {
 public:
-    Chunk get_chunk()
+    Bytes get_chunk()
     {
-        Chunk chunk = random_chunk();
+        Bytes chunk = random_chunk();
         m_chunks.push_back(chunk);
         return chunk;
     }
 
-    bool verify_chunk(Chunk const& chunk, packet_index_t pix) const
+    bool verify_chunk(Bytes const& chunk, packet_index_t pix) const
     {
         return chunk == m_chunks.at(pix);
     }
 
 private:
-    std::vector<Chunk> m_chunks;
+    std::vector<Bytes> m_chunks;
 
-    static Chunk random_chunk()
+    static Bytes random_chunk()
     {
         static auto engine = make_random_engine<std::mt19937>();
 
         std::independent_bits_engine<decltype(engine), CHAR_BIT, unsigned char> bytes;
         std::uniform_int_distribution<> sizes(MAX_BLOCK_PACKET_SIZE_MIN, MAX_BLOCK_PACKET_SIZE_MAX);
 
-        Chunk symbol(sizes(engine));
+        Bytes symbol(sizes(engine));
         std::generate(symbol.begin(), symbol.end(), bytes);
         return symbol;
     }
@@ -64,7 +64,7 @@ private:
 class StreamSender
 {
 public:
-    using Symbol = std::pair<Chunk, packet_index_t>;
+    using Symbol = std::pair<Bytes, packet_index_t>;
 
     enum class ReliabilityLevel {
         UNDER_RATIO,  // If chunks stop arriving, should send FEC symbols
@@ -72,7 +72,7 @@ public:
         ALL_ACKED,    // No sense in sending extra symbols
     };
 
-    void queue_chunk(Chunk chunk)
+    void queue_chunk(Bytes chunk)
     {
         m_pending.push(chunk);
     }
@@ -116,7 +116,7 @@ public:
         }
         else
         {
-            Chunk chunk = pop_value(m_pending);
+            Bytes chunk = pop_value(m_pending);
             auto index = m_encoder.add_chunk(to_sv(chunk));
             m_next_index = SIAMESE_PACKET_NUM_INC(index);
 
@@ -142,7 +142,7 @@ public:
 
 
 private:
-    std::queue<Chunk> m_pending;
+    std::queue<Bytes> m_pending;
     StreamFecEncoder m_encoder;
     packet_index_t m_receiver_expects = 0;
     packet_index_t m_next_index = 0;
@@ -158,7 +158,7 @@ class StreamReceiver
 public:
     using packet_index_t = StreamFecDecoder::packet_index_t;
 
-    StreamReceiver(std::function<bool(Chunk const &, packet_index_t)> verifier):
+    StreamReceiver(std::function<bool(Bytes const &, packet_index_t)> verifier):
         m_verifier(verifier)
     {
     }
@@ -200,7 +200,7 @@ public:
         return {};
     }
 
-    void store(Chunk const& chunk, packet_index_t pix)
+    void store(Bytes const& chunk, packet_index_t pix)
     {
         if(pix >= m_decoded.size())
         {
@@ -218,7 +218,7 @@ public:
         std::cout << "Receiver:";
         for(unsigned received = 0; received < m_decoded.size(); ++received)
         {
-            Chunk const& c = m_decoded[received];
+            Bytes const& c = m_decoded[received];
             if(c.empty())
             {
                 continue;
@@ -235,8 +235,8 @@ public:
 
 private:
     StreamFecDecoder m_decoder;
-    std::vector<Chunk> m_decoded;
-    std::function<bool(Chunk const &, packet_index_t)> m_verifier;
+    std::vector<Bytes> m_decoded;
+    std::function<bool(Bytes const &, packet_index_t)> m_verifier;
     int n_chunks_received = 0;
 };
 
@@ -252,7 +252,7 @@ int main()
 
         ChunkSource source;
         StreamSender sender;
-        StreamReceiver sink([&](Chunk const& chunk, packet_index_t pix) {
+        StreamReceiver sink([&](Bytes const& chunk, packet_index_t pix) {
             return source.verify_chunk(chunk, pix);
         });
 
@@ -262,7 +262,7 @@ int main()
             sender.queue_chunk(chunk);
         }
 
-        std::queue<std::pair<Chunk, packet_index_t>> in_flight;
+        std::queue<std::pair<Bytes, packet_index_t>> in_flight;
         int sent = 0;
         for(; sent < IN_FLIGHT; ++sent)
         {

@@ -8,5 +8,5 @@
 cd "$(dirname "$0")"
 
 mkdir -p build
-cmake -B build -DCMAKE_INSTALL_PREFIX=INST -DCMAKE_TOOLCHAIN_FILE=vcpkg.cmake
+cmake -B build -DCMAKE_INSTALL_PREFIX=INST -DCMAKE_TOOLCHAIN_FILE=vcpkg.cmake "$@"
 (cd build && make)

@@ -16,35 +16,23 @@
 
 std::ifstream urandom("/dev/urandom");
 
-Chunk random_chunk()
+Bytes random_chunk()
 {
-    Chunk message(MAX_BLOCK_PACKET_SIZE);
+    Bytes message(MAX_BLOCK_PACKET_SIZE);
     urandom.read(&message[0], message.size());
     return message;
 }
 
-int const N_PACKETS = 50;
+int const N_PACKETS = 5000;
 int const ACK_EVERY = 3;
 int const FEC_PACKET_EVERY = 5;
 int const LOSE_EVERY = 7;
 int const IN_FLIGHT = 10;
 
-struct show_crc32
-{
-    std::string_view sv;
-
-    friend std::ostream& operator <<(std::ostream& os, show_crc32 const& x)
-    {
-        boost::io::ios_flags_saver ifs(std::cout);
-        return os
-            << std::hex << std::setfill('0') << std::setw(8) << crc32(x.sv);
-    };
-};
-
 class ChunkSource
 {
 public:
-    std::pair<Chunk, StreamFecEncoder::packet_index_t> get_symbol()
+    std::pair<Bytes, StreamFecEncoder::packet_index_t> get_symbol()
     {
         // About to send regular packet #m_packets_sent
         if(m_packets_sent && m_packets_sent % FEC_PACKET_EVERY == 0 && !m_fec_sent)
@@ -58,7 +46,7 @@ public:
         else
         {
             m_fec_sent = false;
-            Chunk message = random_chunk();
+            Bytes message = random_chunk();
 
             ++m_packets_sent;
             auto sent_as = m_encoder.add_chunk(to_sv(message));
@@ -137,7 +125,7 @@ int main()
         ChunkSink sink;
         using packet_index_t = StreamFecEncoder::packet_index_t;
 
-        std::queue<std::pair<Chunk, packet_index_t>> in_flight;
+        std::queue<std::pair<Bytes, packet_index_t>> in_flight;
         for(int i = 0; i < IN_FLIGHT; ++i)
         {
             in_flight.push(source.get_symbol());
@@ -149,7 +137,8 @@ int main()
             auto message = in_flight.front();
             in_flight.pop();
 
-            if((i + 1) % LOSE_EVERY == 0)
+            //if((i + 1) % LOSE_EVERY == 0)
+            if(i <= 100)
             {
                 std::cout << "Oops, lost: ix=" << message.second
                     << " crc=" << show_crc32{to_sv(message.first)} << std::endl;
@@ -159,7 +148,7 @@ int main()
                 auto ack = sink.process_chunk(to_sv(message.first), message.second);
                 if(ack.size())
                 {
-                    source.process_ack(to_sv(ack));
+                    //source.process_ack(to_sv(ack));
                 }
             }
         }

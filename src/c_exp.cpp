@@ -16,9 +16,9 @@
 
 std::ifstream urandom("/dev/urandom");
 
-Chunk random_chunk()
+Bytes random_chunk()
 {
-    Chunk message(MAX_BLOCK_PACKET_SIZE);
+    Bytes message(MAX_BLOCK_PACKET_SIZE);
     urandom.read(&message[0], message.size());
     return message;
 }
@@ -44,7 +44,7 @@ struct show_crc32
 class ChunkSource
 {
 public:
-    std::pair<Chunk, StreamFecEncoder::packet_index_t> get_symbol()
+    std::pair<Bytes, StreamFecEncoder::packet_index_t> get_symbol()
     {
         // About to send regular packet #m_packets_sent
         if(m_packets_sent && m_packets_sent % FEC_PACKET_EVERY == 0 && !m_fec_sent)
@@ -58,7 +58,7 @@ public:
         else
         {
             m_fec_sent = false;
-            Chunk message = random_chunk();
+            Bytes message = random_chunk();
 
             ++m_packets_sent;
             auto sent_as = m_encoder.add_chunk(to_sv(message));

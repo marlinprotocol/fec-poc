@@ -17,14 +17,14 @@
 int const MAX_BLOCK_PACKET_SIZE_MIN = 10;
 int const MAX_BLOCK_PACKET_SIZE_MAX = MAX_BLOCK_PACKET_SIZE;
 
-Chunk random_chunk()
+Bytes random_chunk()
 {
     static auto engine = make_random_engine<std::mt19937>();
 
     std::independent_bits_engine<decltype(engine), CHAR_BIT, unsigned char> bytes;
     std::uniform_int_distribution<> sizes(MAX_BLOCK_PACKET_SIZE_MIN, MAX_BLOCK_PACKET_SIZE_MAX);
 
-    Chunk message(sizes(engine));
+    Bytes message(sizes(engine));
     std::generate(message.begin(), message.end(), bytes);
     return message;
 }
@@ -38,7 +38,7 @@ int main()
 
         fec_init();
 
-        std::vector<Chunk> chunks(5);
+        std::vector<Bytes> chunks(5);
         std::generate(chunks.begin(), chunks.end(), random_chunk);
 
         StreamFecEncoder enc;

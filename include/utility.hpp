@@ -1,6 +1,8 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <random>
 #include <string_view>
@@ -10,6 +12,9 @@
 #include <boost/crc.hpp>
 #include <boost/io/ios_state.hpp>
 #include <boost/rational.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -20,7 +25,10 @@ std::uint32_t const MAX_STREAM_PACKET_SIZE = MAX_PACKET_SIZE - 4 * sizeof(std::u
 
 float const REDUNDANCY = 1.3;
 
-using Chunk = std::vector<char>;
+using Bytes = std::vector<char>;
+using Clock = std::chrono::high_resolution_clock;
+using time_point_t = std::chrono::time_point<Clock>;
+static auto const FAR_FUTURE = time_point_t::max();
 
 template <
     class T,

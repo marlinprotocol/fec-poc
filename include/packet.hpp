@@ -75,6 +75,7 @@ public:
     template <class Header>
     Header& header()
     {
+        ENFORCE(m_data.size() >= sizeof(Header));
         return *reinterpret_cast<Header *>(&m_data[0]);
     }
 

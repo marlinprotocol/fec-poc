@@ -53,38 +53,106 @@ public:
         return m_block_size;
     }
 
+    std::uint32_t n_original() const
+    {
+        return (m_block_size + MAX_BLOCK_PACKET_SIZE - 1) / MAX_BLOCK_PACKET_SIZE;
+    }
+
     auto const& decoded_data() const
     {
         return m_decoded;
     }
 
-    template <class Callback>
-    void generate_unseen_symbols(float redundancy, Callback&& callback)
+    class BlockGenerator
     {
-        std::uint32_t n_original = (m_block_size + MAX_BLOCK_PACKET_SIZE - 1) / MAX_BLOCK_PACKET_SIZE;
-        std::uint32_t n = n_original * redundancy + 0.5;  // assuming >= n_original
-        for(std::uint32_t i = 0; i < n_original; ++i)
+    public:
+        using result_type = std::pair<Bytes, std::uint32_t>;
+
+        BlockGenerator(Block& block): m_block(&block)
         {
-            if(i < m_symbols_seen.size() && m_symbols_seen[i])
+        }
+
+        result_type operator()()
+        {
+            while(m_index < m_block->m_symbols_seen.size() &&
+                m_block->m_symbols_seen[m_index])
             {
-                continue;
+                ++m_index;
             }
 
-            callback(std::string_view(
-                &m_decoded[i * MAX_BLOCK_PACKET_SIZE],
-                std::min((i + 1) * MAX_BLOCK_PACKET_SIZE, m_block_size) - i * MAX_BLOCK_PACKET_SIZE
-            ), i);
-        }
-        for(std::uint32_t i = n_original; i < n; i++)
-        {
-            if(i < m_symbols_seen.size() && m_symbols_seen[i])
-            {
-                continue;
-            }
+            struct Incrementer {
+                std::uint32_t& x;
+                ~Incrementer() {
+                    ++x;
+                }
+            } incrementer{m_index};
 
-            std::vector data = m_fec.get_symbol_data(i);
-            callback(std::string_view(&data[0], data.size()), i);
+            if(m_index < m_block->n_original())
+            {
+                std::uint32_t ix_first = m_index * MAX_BLOCK_PACKET_SIZE;
+                std::uint32_t ix_last = std::min(m_block->m_block_size,
+                    (m_index + 1) * MAX_BLOCK_PACKET_SIZE);
+
+                return {{m_block->m_decoded.begin() + ix_first,
+                    m_block->m_decoded.begin() + ix_last}, m_index};
+            }
+            else
+            {
+                return {m_block->m_fec.get_symbol_data(m_index), m_index};
+            }
         }
+
+    private:
+        Block* m_block;
+        std::uint32_t m_index = 0;
+    };
+
+    class BlockGeneratorIterator: public boost::iterator_facade<
+        BlockGeneratorIterator, 
+        BlockGenerator::result_type,
+        boost::single_pass_traversal_tag,
+        BlockGenerator::result_type>
+    {
+    public:
+        using iterator_category = std::input_iterator_tag;
+
+        BlockGeneratorIterator(BlockGenerator gen, unsigned index):
+            m_gen(gen), m_index(index)
+        {
+        }
+
+        auto dereference() const
+        {
+            return m_gen();
+        }
+
+        void increment()
+        {
+            ++m_index;
+        }
+
+        bool equal(BlockGeneratorIterator const& other) const
+        {
+            return m_index == other.m_index;
+        }
+
+    private:
+        mutable BlockGenerator m_gen;
+        unsigned m_index;
+    };
+
+    auto unseen_generator()
+    {
+        return BlockGenerator(*this);
+    }
+
+    auto unseen_range(unsigned n)
+    {
+        BlockGenerator g = unseen_generator();
+        return boost::make_iterator_range(
+            BlockGeneratorIterator(g, 0),
+            BlockGeneratorIterator(g, n)
+        );
     }
 
 private:
