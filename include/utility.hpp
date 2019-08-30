@@ -13,6 +13,7 @@
 #include <boost/functional/hash.hpp>
 #include <boost/io/ios_state.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/rational.hpp>
@@ -29,7 +30,8 @@ int const MAX_BLOCK_PACKET_SIZE_MAX = MAX_BLOCK_PACKET_SIZE;
 
 float const REDUNDANCY = 1.3;
 
-#define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
+#define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error( \
+    __FILE__ ":" BOOST_PP_STRINGIZE(__LINE__) " " #_expr_), 0))
 
 #define ENFORCE0(_expr_) do { \
     int _res = (_expr_); \
@@ -206,8 +208,8 @@ Engine make_random_engine()
 
 static Bytes random_chunk()
 {
-    //static auto engine = make_random_engine<std::mt19937>();
-    static auto engine = std::mt19937();
+    static auto engine = make_random_engine<std::mt19937>();
+    //static auto engine = std::mt19937();
 
     std::independent_bits_engine<decltype(engine), CHAR_BIT, unsigned char> bytes;
     std::uniform_int_distribution<> sizes(MAX_BLOCK_PACKET_SIZE_MIN, MAX_BLOCK_PACKET_SIZE_MAX);

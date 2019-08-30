@@ -54,7 +54,7 @@ public:
         m_wirehair(
             wirehair_encoder_create(
                 nullptr,
-                &*block.begin(),
+                char_cast<void const *>(block.data()),
                 block.size(),
                 MAX_BLOCK_PACKET_SIZE
             ),
