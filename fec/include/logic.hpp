@@ -83,7 +83,7 @@ public:
     {
         Bytes packet = m_packets.pop_value();
         m_shaper.did_send(now, packet.size());
-        return std::move(packet);
+        return packet;
     }
 
 private:
