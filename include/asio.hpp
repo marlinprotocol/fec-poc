@@ -31,7 +31,7 @@ void default_send_bytes_callback(error_code ec, std::size_t bytes_sent)
 
 template <class Callback = decltype(default_send_bytes_callback)>
 void send_bytes(udp::socket& socket, udp::endpoint endpoint,
-    std::vector<char> data, Callback&& callback = default_send_bytes_callback)
+    Bytes data, Callback&& callback = default_send_bytes_callback)
 {
     // Some juggling to achieve correct data lifetime
     auto buffer = asio::buffer(data);  // points to vector contents
@@ -109,10 +109,15 @@ public:
 
     AsioNode(AsioNode const &) = delete;
 
+    void send_bytes(udp::endpoint endpoint, Bytes bytes)
+    {
+        ::send_bytes(m_socket, endpoint, std::move(bytes));
+    }
+
     AsioReceiver make_receiver(udp::endpoint endpoint, unsigned kbps)
     {
         return AsioReceiver(m_io_context, [this, endpoint](Bytes packet) {
-            send_bytes(m_socket, endpoint, std::move(packet));
+            send_bytes(endpoint, std::move(packet));
         }, kbps);
     }
 

@@ -64,13 +64,14 @@ public:
                     << " bid=" << h.m_block_id
                     << " bs=" << h.m_block_size
                     << " px=" << h.m_packet_index
-                    << std::endl;
+                ;
 
                 if(packet_seq++ % LOSE_EVERY == 0)
                 {
-                    std::cout << "Oops, lost!" << std::endl;
+                    std::cout << " ...oops, lost!" << std::endl;
                     break;
                 }
+                std::cout << std::endl;
 
                 auto& block = m_blocks.try_emplace(
                     {h.m_channel_id, h.m_block_id},
@@ -97,12 +98,15 @@ public:
                     }
                 }
 
-                for(auto& [ep, receiver] : m_subscriptions[h.m_channel_id])
+                if(!packets_to_send.empty())
                 {
-                    std::cout << "Queue to " << ep << std::endl;
-                    for(auto const& p : packets_to_send)
+                    for(auto& [ep, receiver] : m_subscriptions[h.m_channel_id])
                     {
-                        receiver.queue_packet(p);
+                        std::cout << "Queue to " << ep << std::endl;
+                        for(auto const& p : packets_to_send)
+                        {
+                            receiver.queue_packet(p);
+                        }
                     }
                 }
             }
@@ -116,13 +120,14 @@ public:
                     << " size=" << p.data().size()
                     << " ch=" << h.m_channel_id
                     << " px=" << h.m_packet_index
-                    << std::endl;
+                ;
 
                 if(packet_seq++ % LOSE_EVERY == 0)
                 {
-                    std::cout << "Oops, lost!" << std::endl;
+                    std::cout << " ...Oops, lost!" << std::endl;
                     break;
                 }
+                std::cout << std::endl;
 
                 auto& stream = m_streams.try_emplace(
                     h.m_channel_id
@@ -132,6 +137,14 @@ public:
                     p.payload<StreamPacketHeader>(),
                     h.m_packet_index
                 );
+
+                Bytes ack = stream.m_decoder.generate_ack();
+                if(!ack.empty())
+                {
+                    send_bytes(peer,
+                        Packet::make<StreamAckPacketHeader>(to_sv(ack),
+                            h.m_channel_id).move_data());
+                }
 
                 while(stream.m_decoder.has_data())
                 {
@@ -145,21 +158,42 @@ public:
                 while(stream.m_encoder.has_data())
                 {
                     Symbol symbol = stream.m_encoder.get_symbol();
-                    packets_to_send.push_back(make_stream_packet(
+                    packets_to_send.push_back(Packet::make<StreamPacketHeader>(
+                        to_sv(symbol.first),
                         h.m_channel_id,
-                        symbol.second,
-                        to_sv(symbol.first)
+                        symbol.second
                     ).move_data());
                 }
 
-                for(auto& [ep, receiver] : m_subscriptions[h.m_channel_id])
+                if(!packets_to_send.empty())
                 {
-                    std::cout << "Queue to " << ep << std::endl;
-                    for(auto const& p : packets_to_send)
+                    for(auto& [ep, receiver] : m_subscriptions[h.m_channel_id])
                     {
-                        receiver.queue_packet(p);
+                        std::cout << "Queue to " << ep
+                            << " n=" << packets_to_send.size() << std::endl;
+                        for(auto const& p : packets_to_send)
+                        {
+                            receiver.queue_packet(p);
+                        }
                     }
                 }
+            }
+            break;
+
+        case PacketHeader::PacketType::STREAM_ACK:
+            {
+                auto const& h = p.header<StreamAckPacketHeader>();
+                std::cout
+                    << "A stream ack!"
+                    << " size=" << p.data().size()
+                    << " ch=" << h.m_channel_id
+                    << std::endl;
+
+                auto& stream = m_streams.try_emplace(
+                    h.m_channel_id
+                ).first->second; // pair<iterator, bool>
+
+                stream.m_encoder.process_ack(p.payload<StreamAckPacketHeader>());
             }
             break;
 

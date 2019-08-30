@@ -159,7 +159,6 @@ public:
         ENFORCE(siamese_encode(m_encoder.get(), &fec_packet) == 0);
 
         auto sv = to_sv(fec_packet);
-        std::cout << "Siamese just produced crc=" << show_crc32{sv} << std::endl;
         return { { begin(sv), end(sv) }, PACKET_INDEX_FEC };
 
 
@@ -266,8 +265,9 @@ public:
         std::vector<std::pair<Bytes, packet_index_t>> result;
         for(auto* packet = packets; n_packets--; ++packet)
         {
-            //std::cout << *packet << std::endl;
             auto sv = to_sv(*packet);
+            std::cout << "Decoded: crc=" << show_crc32{sv}
+                << " n=" << packet->PacketNum << std::endl;
             result.push_back({
                 { begin(sv), end(sv) },
                 packet->PacketNum

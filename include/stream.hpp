@@ -34,9 +34,6 @@ public:
 
     void process_symbol(std::string_view data, packet_index_t index)
     {
-        std::cout << "p_s: crc=" << show_crc32{data} << " sz=" << data.size()
-            << " index=" << index << std::endl;
-
         m_decoder.process_symbol(data, index);
 
         if(index != StreamFecDecoder::PACKET_INDEX_FEC)
@@ -46,13 +43,16 @@ public:
 
         while(m_decoder.has_data())
         {
-            std::cout << "has_data!\n";
             for(auto [data, ix] : m_decoder.get_new_chunks())
             {
-                std::cout << "Decoder has something! " << index << std::endl;
-                process_original_chunk(std::move(data), index);
+                process_original_chunk(std::move(data), ix);
             }
         }
+    }
+
+    Bytes generate_ack()
+    {
+        return m_decoder.generate_ack();
     }
 
 private:
@@ -62,7 +62,6 @@ private:
 
     void process_original_chunk(Bytes data, packet_index_t index)
     {
-        std::cout << "poc: i=" << index << " ni=" << m_next_index << std::endl;
         if(index < m_next_index)
         {
             // TODO: FIXME Siamese wraparound!
@@ -114,8 +113,6 @@ public:
     Symbol generate_fec_symbol()
     {
         auto symbol = m_encoder.generate_fec_symbol();
-        std::cout << ">> -- Recovery: crc=" << show_crc32{to_sv(symbol.first)}
-            << " rl=" << (int)reliability_level() << std::endl;
         return symbol;
     }
 
@@ -148,21 +145,21 @@ public:
             m_segment_chunk_index1 %= FEC_RATIO.denominator();
             m_segment_chunk_index1++;  // -> [1, d]
 
-            std::cout
-                << ">> -- Data: ix=" << index << " "
-                << show_crc32{to_sv(chunk)}
-                << " rl=" << (int)reliability_level()
-                << std::endl;
+            // std::cout
+            //     << ">> -- Data: ix=" << index << " "
+            //     << show_crc32{to_sv(chunk)}
+            //     << " rl=" << (int)reliability_level()
+            //     << std::endl;
                 
             return { chunk, index };
         }
     }
 
-    void process_ack(std::string_view symbol)
+    void process_ack(std::string_view message)
     {
         // TODO: what to do with out-of-order ACKs?!
-        m_receiver_expects = m_encoder.process_ack(symbol);
-        std::cout << "<< -- Ack: " << m_receiver_expects << std::endl;
+        m_receiver_expects = m_encoder.process_ack(message);
+        std::cout << "Ack: receiver_expects=" << m_receiver_expects << std::endl;
     }
 
 private:

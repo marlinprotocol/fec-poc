@@ -28,12 +28,23 @@ struct BlockPacketHeader: PacketHeader
     std::uint32_t m_block_id;
     std::uint32_t m_block_size;
     std::uint32_t m_packet_index;
+
+    static auto const PACKET_TYPE = PacketType::BLOCK;
 };
 
 struct StreamPacketHeader: PacketHeader
 {
     std::uint32_t m_channel_id;
     std::uint32_t m_packet_index;
+
+    static auto const PACKET_TYPE = PacketType::STREAM;
+};
+
+struct StreamAckPacketHeader: PacketHeader
+{
+    std::uint32_t m_channel_id;
+
+    static auto const PACKET_TYPE = PacketType::STREAM_ACK;
 };
 
 struct ControlPacketHeader: PacketHeader
@@ -45,6 +56,8 @@ struct ControlPacketHeader: PacketHeader
     } m_action;
     std::uint32_t m_channel_id;
     std::uint32_t m_kbps;
+
+    static auto const PACKET_TYPE = PacketType::CONTROL;
 };
 
 static_assert(MAX_BLOCK_PACKET_SIZE + sizeof(BlockPacketHeader) == MAX_PACKET_SIZE);
@@ -71,6 +84,15 @@ public:
         this->header<Header>() = header;
         std::copy(begin(payload), end(payload), m_data.begin() +
             sizeof(Header));
+    }
+
+    template <class Header, class... Args>
+    static Packet make(std::string_view payload, Args const&... args)
+    {
+        return Packet(Header{
+            { 0u, Header::PACKET_TYPE },
+            args...
+        }, payload);
     }
 
     template <class Header>

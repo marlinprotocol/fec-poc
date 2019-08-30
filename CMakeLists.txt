@@ -5,8 +5,12 @@ add_compile_options(-msse4.1)
 
 find_package(Boost COMPONENTS program_options REQUIRED)
 
-file(GLOB siamese_sources 3rdparty/siamese/*.cpp)
-set(wirehair_sources 3rdparty/wirehair/WirehairCodec.cpp 3rdparty/wirehair/WirehairTools.cpp 3rdparty/wirehair/wirehair.cpp)
+file(GLOB siamese_sources 3rdparty/siamese/*.cpp)  # includes gf256.cpp
+set(wirehair_sources
+    3rdparty/wirehair/WirehairCodec.cpp
+    3rdparty/wirehair/WirehairTools.cpp
+    3rdparty/wirehair/wirehair.cpp
+)  # does not include gf256.cpp
 
 add_library(wirehair-and-siamese STATIC ${wirehair_sources} ${siamese_sources})
     target_compile_options(wirehair-and-siamese PRIVATE -D__restrict=)
