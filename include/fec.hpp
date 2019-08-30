@@ -53,7 +53,7 @@ public:
     BlockFec(std::string_view block):
         m_wirehair(
             wirehair_encoder_create(
-                m_wirehair.get(),
+                nullptr,
                 &*block.begin(),
                 block.size(),
                 MAX_BLOCK_PACKET_SIZE
@@ -68,7 +68,7 @@ public:
         m_block_size(block_size),
         m_wirehair(
             wirehair_decoder_create(
-                m_wirehair.get(),
+                nullptr,
                 block_size,
                 MAX_BLOCK_PACKET_SIZE
             ),
