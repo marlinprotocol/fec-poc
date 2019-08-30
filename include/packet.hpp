@@ -16,6 +16,7 @@ struct PacketHeader
     {
         // Ordered by priority, starting with lowest
         STREAM,
+        STREAM_ACK,
         BLOCK,
         CONTROL,
     } m_packet_type;

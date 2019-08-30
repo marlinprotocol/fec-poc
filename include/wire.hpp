@@ -18,7 +18,18 @@ Packet make_block_packet(std::uint32_t channel_id, std::uint32_t block_id,
     return Packet(h, payload);
 }
 
-auto make_subscribe_packet(std::uint32_t channel_id, unsigned kbps)
+Packet make_stream_packet(std::uint32_t channel_id, std::uint32_t packet_index,
+    std::string_view payload)
+{
+    StreamPacketHeader h = {
+        { 0, PacketHeader::PacketType::STREAM },
+        channel_id,
+        packet_index
+    };
+    return Packet(h, payload);
+}
+
+Packet make_subscribe_packet(std::uint32_t channel_id, unsigned kbps)
 {
     ControlPacketHeader h = {
         { 0, PacketHeader::PacketType::CONTROL },

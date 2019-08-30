@@ -14,22 +14,6 @@
 
 #define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
 
-int const MAX_BLOCK_PACKET_SIZE_MIN = 10;
-int const MAX_BLOCK_PACKET_SIZE_MAX = MAX_BLOCK_PACKET_SIZE;
-
-Bytes random_chunk()
-{
-    static auto engine = make_random_engine<std::mt19937>();
-
-    std::independent_bits_engine<decltype(engine), CHAR_BIT, unsigned char> bytes;
-    std::uniform_int_distribution<> sizes(MAX_BLOCK_PACKET_SIZE_MIN, MAX_BLOCK_PACKET_SIZE_MAX);
-
-    Bytes message(sizes(engine));
-    std::generate(message.begin(), message.end(), bytes);
-    return message;
-}
-
-
 int main()
 {
     try

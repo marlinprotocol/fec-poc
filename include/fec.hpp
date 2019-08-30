@@ -11,12 +11,11 @@
 
 #include "utility.hpp"
 
-#define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
 
-template <class CPtr, auto delete_function>
+template <class CPtr>
 using PtrWithDeleteFunction = std::unique_ptr<
     std::remove_pointer_t<CPtr>,
-    std::integral_constant<decltype(delete_function), delete_function>
+    void(*)(CPtr)
 >;
 
 // === Terminology ===
@@ -51,30 +50,31 @@ using PtrWithDeleteFunction = std::unique_ptr<
 class BlockFec
 {
 public:
-    BlockFec(std::string_view block)
-    {
-        char const* as_pchar = &*block.begin();
-        m_wirehair.reset(
+    BlockFec(std::string_view block):
+        m_wirehair(
             wirehair_encoder_create(
                 m_wirehair.get(),
-                as_pchar,
+                &*block.begin(),
                 block.size(),
                 MAX_BLOCK_PACKET_SIZE
-            )
-        );
+            ),
+            wirehair_free
+        )
+    {
         ENFORCE(m_wirehair.get());
     }
 
     BlockFec(std::uint64_t block_size):
-        m_block_size(block_size)
-    {
-        m_wirehair.reset(
+        m_block_size(block_size),
+        m_wirehair(
             wirehair_decoder_create(
                 m_wirehair.get(),
                 block_size,
                 MAX_BLOCK_PACKET_SIZE
-            )
-        );
+            ),
+            wirehair_free
+        )
+    {
         ENFORCE(m_wirehair.get());
     }
 
@@ -124,7 +124,7 @@ public:
 
 private:
     std::uint32_t m_block_size;
-    PtrWithDeleteFunction<WirehairCodec, wirehair_free> m_wirehair;
+    PtrWithDeleteFunction<WirehairCodec> m_wirehair;
 };
 
 class StreamFecCommon
@@ -137,7 +137,7 @@ public:
 class StreamFecEncoder: public StreamFecCommon
 {
 public:
-    StreamFecEncoder(): m_encoder(siamese_encoder_create())
+    StreamFecEncoder(): m_encoder(siamese_encoder_create(), siamese_encoder_free)
     {
     }
 
@@ -153,12 +153,13 @@ public:
         return packet.PacketNum;
     }
 
-    std::pair<std::vector<char>, packet_index_t> generate_fec_symbol()
+    std::pair<Bytes, packet_index_t> generate_fec_symbol()
     {
         SiameseRecoveryPacket fec_packet;
         ENFORCE(siamese_encode(m_encoder.get(), &fec_packet) == 0);
 
         auto sv = to_sv(fec_packet);
+        std::cout << "Siamese just produced crc=" << show_crc32{sv} << std::endl;
         return { { begin(sv), end(sv) }, PACKET_INDEX_FEC };
 
 
@@ -201,13 +202,13 @@ public:
     }
 
 private:
-    PtrWithDeleteFunction<SiameseEncoder, siamese_encoder_free> m_encoder;
+    PtrWithDeleteFunction<SiameseEncoder> m_encoder;
 };
 
 class StreamFecDecoder: public StreamFecCommon
 {
 public:
-    StreamFecDecoder(): m_decoder(siamese_decoder_create())
+    StreamFecDecoder(): m_decoder(siamese_decoder_create(), siamese_decoder_free)
     {
     }
 
@@ -256,14 +257,14 @@ public:
     {
         SiameseOriginalPacket* packets = nullptr;
         unsigned n_packets;
-        ENFORCE(siamese_decode(
+        ENFORCE0(siamese_decode(
             m_decoder.get(),
             &packets,
             &n_packets
-        ) == 0);
+        ));
         
         std::vector<std::pair<Bytes, packet_index_t>> result;
-        for(auto packet = packets; n_packets--; ++packet)
+        for(auto* packet = packets; n_packets--; ++packet)
         {
             //std::cout << *packet << std::endl;
             auto sv = to_sv(*packet);
@@ -305,7 +306,7 @@ public:
     }
 
 private:
-    PtrWithDeleteFunction<SiameseDecoder, siamese_decoder_free> m_decoder;
+    PtrWithDeleteFunction<SiameseDecoder> m_decoder;
 };
 
 inline void fec_init()

@@ -10,11 +10,12 @@
 #include <queue>
 
 #include <boost/crc.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/io/ios_state.hpp>
-#include <boost/rational.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/range/iterator_range.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/rational.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -23,7 +24,19 @@ std::uint32_t const MAX_PACKET_SIZE = 1400;
 std::uint32_t const MAX_BLOCK_PACKET_SIZE = MAX_PACKET_SIZE - 6 * sizeof(std::uint32_t);
 std::uint32_t const MAX_STREAM_PACKET_SIZE = MAX_PACKET_SIZE - 4 * sizeof(std::uint32_t);
 
+int const MAX_BLOCK_PACKET_SIZE_MIN = 10;
+int const MAX_BLOCK_PACKET_SIZE_MAX = MAX_BLOCK_PACKET_SIZE;
+
 float const REDUNDANCY = 1.3;
+
+#define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
+
+#define ENFORCE0(_expr_) do { \
+    int _res = (_expr_); \
+    if(_res != 0) { \
+        throw std::runtime_error(#_expr_ " == " + std::to_string(_res)); \
+    } } while(0)
+
 
 using Bytes = std::vector<char>;
 using Clock = std::chrono::high_resolution_clock;
@@ -118,6 +131,11 @@ inline std::string_view to_sv(std::vector<char> const& v)
     return { &v[0], v.size() };
 }
 
+inline std::string_view to_sv(std::string_view sv)
+{
+    return sv;
+}
+
 inline std::string_view to_sv(std::vector<unsigned char> const& v)
 {
     return { char_cast<char const *>(&v[0]), v.size() };
@@ -184,6 +202,19 @@ Engine make_random_engine()
     static std::random_device rd;
     RandomDeviceSeedSeq ss{rd};
     return Engine(ss);
+}
+
+static Bytes random_chunk()
+{
+    //static auto engine = make_random_engine<std::mt19937>();
+    static auto engine = std::mt19937();
+
+    std::independent_bits_engine<decltype(engine), CHAR_BIT, unsigned char> bytes;
+    std::uniform_int_distribution<> sizes(MAX_BLOCK_PACKET_SIZE_MIN, MAX_BLOCK_PACKET_SIZE_MAX);
+
+    Bytes chunk(sizes(engine));
+    std::generate(chunk.begin(), chunk.end(), bytes);
+    return chunk;
 }
 
 template <class Int>

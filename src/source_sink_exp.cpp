@@ -14,15 +14,6 @@
 
 #define ENFORCE(_expr_) (void)((_expr_) || (throw std::runtime_error(#_expr_), 0))
 
-std::ifstream urandom("/dev/urandom");
-
-Bytes random_chunk()
-{
-    Bytes message(MAX_BLOCK_PACKET_SIZE);
-    urandom.read(&message[0], message.size());
-    return message;
-}
-
 int const N_PACKETS = 5000;
 int const ACK_EVERY = 3;
 int const FEC_PACKET_EVERY = 5;
